@@ -2,3 +2,4 @@ requests
 langchain
 langchain-community
 pymongo
+langchain_mongodb

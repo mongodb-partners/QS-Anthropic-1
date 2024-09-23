@@ -10,18 +10,15 @@ from langchain.prompts import MessagesPlaceholder
 from langchain.schema.messages import AIMessage, HumanMessage
 from langchain.tools import StructuredTool
 from langchain_community.chat_models import BedrockChat
+from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 from pydantic import BaseModel, Field
+
 import utils
+
 
 # Define Your Models and Parameters
 class ModelId(str, Enum):
-    CLAUDE_3_5_S = "anthropic.claude-3-5-sonnet-20240620-v1:0"
-    CLAUDE_3_H = "anthropic.claude-3-haiku-20240307-v1:0"
-    CLAUDE_3_S = "anthropic.claude-3-sonnet-20240229-v1:0"
-    CLAUDE_3_O = "anthropic.claude-3-opus-20240229-v1:0"
     CLAUDE_2_1 = "anthropic.claude-v2:1"
-    CLAUDE_2 = "anthropic.claude-v2"
-    CLAUDE_1 = "anthropic.claude-instant-v1"
     AWS_Titan_Embed_Text = "amazon.titan-embed-text-v1"
 
 
@@ -31,12 +28,6 @@ class ModelKwargs(BaseModel):
     top_p: float = Field(default=0.999, ge=0, le=1)
     top_k: int = Field(default=0, ge=0, le=500)
     stop_sequences: list = Field(["\n\nHuman"])
-
-
-class MongoDBConnection:
-    def getMongoDBUri():
-        mongo_uri = utils.get_secret("workshop/atlas_secret")
-        return mongo_uri
 
 
 llm_model = ModelId.CLAUDE_2_1.value
@@ -66,7 +57,7 @@ def initialize_llm(client):
 bedrock_runtime = setup_bedrock()
 
 # Connect to the MongoDB database
-mongoDBClient = pymongo.MongoClient(MongoDBConnection.getMongoDBUri())
+mongoDBClient = pymongo.MongoClient(utils.get_MongoDB_Uri())
 logging.info("Connected to MongoDB...")
 
 database = mongoDBClient["anthropic-travel-agency"]
@@ -181,7 +172,18 @@ def mdb_query(query):
     return llm_input_text
 
 
-def setup_full_agent():
+def get_session_history(session_id: str) -> MongoDBChatMessageHistory:
+    return MongoDBChatMessageHistory(
+        utils.get_MongoDB_Uri(),
+        session_id,
+        database_name="anthropic-travel-agency",
+        collection_name="chat_history",
+    )
+
+
+def interact_with_agent(sessionId, input_query, chat_history):
+    """Interact with the agent and store chat history. Return the response."""
+
     # Initialize bedrock and llm
     bedrock_runtime = setup_bedrock()
     llm = initialize_llm(bedrock_runtime)
@@ -206,7 +208,13 @@ def setup_full_agent():
     ]
 
     chat_message_int = MessagesPlaceholder(variable_name="chat_history")
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    # memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+    memory = ConversationBufferMemory(
+        memory_key="chat_history",
+        chat_memory=get_session_history(sessionId),
+        return_messages=True,
+    )
 
     agent_executor = initialize_agent(
         tools,
@@ -219,12 +227,6 @@ def setup_full_agent():
         memory=memory,
         verbose=False,
     )
-
-    return agent_executor
-
-
-def interact_with_agent(agent_executor, input_query, chat_history):
-    """Interact with the agent and store chat history. Return the response."""
     result = agent_executor.invoke(
         {
             "input": input_query,
@@ -245,18 +247,16 @@ def lex_response(res):
         },
         "messages": [{"contentType": "PlainText", "content": str(res)}],
     }
-
     return response
 
 
 def lambda_handler(event, context):
 
-    # Initialize agent
-    agent_executor = setup_full_agent()
-
+    sessionId = event["sessionId"]
     chat_history = []
     input_text = event["inputTranscript"]
-    response = interact_with_agent(agent_executor, input_text, chat_history)
+    logging.info(input_text)
+    response = interact_with_agent(sessionId, input_text, chat_history)
     logging.info(response["output"])
     response = lex_response(response["output"])
     return response
