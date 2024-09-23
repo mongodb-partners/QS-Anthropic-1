@@ -39,7 +39,7 @@ class MongoDBConnection:
         return mongo_uri
 
 
-llm_model = ModelId.CLAUDE_3_H.value
+llm_model = ModelId.CLAUDE_2_1.value
 embedding_model_id = ModelId.AWS_Titan_Embed_Text.value
 
 field_name_to_be_vectorized = "About Place"
@@ -217,7 +217,7 @@ def setup_full_agent():
             "input_variables": ["input", "agent_scratchpad", "chat_history"],
         },
         memory=memory,
-        verbose=True,
+        verbose=False,
     )
 
     return agent_executor
@@ -258,5 +258,5 @@ def lambda_handler(event, context):
     input_text = event["inputTranscript"]
     response = interact_with_agent(agent_executor, input_text, chat_history)
     logging.info(response["output"])
-    response = lex_response(response)
+    response = lex_response(response["output"])
     return response
