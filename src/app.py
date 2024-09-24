@@ -18,19 +18,19 @@ import utils
 
 # Define Your Models and Parameters
 class ModelId(str, Enum):
-    CLAUDE_2_1 = "anthropic.claude-v2:1"
+    CLAUDE_3_H = "anthropic.claude-3-haiku-20240307-v1:0"
     AWS_Titan_Embed_Text = "amazon.titan-embed-text-v1"
 
 
 class ModelKwargs(BaseModel):
-    temperature: float = Field(default=0.7, ge=0, le=1)
+    temperature: float = Field(default=0.5, ge=0, le=1)
     max_tokens: int = Field(default=2048, ge=1, le=4096)
-    top_p: float = Field(default=0.999, ge=0, le=1)
+    top_p: float = Field(default=0.5, ge=0, le=1)
     top_k: int = Field(default=0, ge=0, le=500)
     stop_sequences: list = Field(["\n\nHuman"])
 
 
-llm_model = ModelId.CLAUDE_2_1.value
+llm_model = ModelId.CLAUDE_3_H.value
 embedding_model_id = ModelId.AWS_Titan_Embed_Text.value
 
 field_name_to_be_vectorized = "About Place"
@@ -111,7 +111,7 @@ def mongodb_place_lookup_by_best_time_to_visit(query_str: str) -> str:
 
 # filter the data using the criteria and do a Schematic search
 def mongodb_search(query: str) -> str:
-    """Returns results from MongoDB related to the user input. Pass text input only."""
+    """Retrieve results from MongoDB related to the user input by performing vector search. Pass text input only."""
     embeddings = BedrockEmbeddings(
         client=bedrock_runtime,
         model_id=embedding_model_id,
@@ -135,8 +135,6 @@ def mongodb_search(query: str) -> str:
                 "$project": {
                     "score": {"$meta": "searchScore"},
                     field_name_to_be_vectorized: 1,
-                    "title": 1,
-                    "claim_id": 1,
                     "_id": 0,
                 }
             },
@@ -210,6 +208,10 @@ def interact_with_agent(sessionId, input_query, chat_history):
         return_messages=True,
     )
 
+    PREFIX = """You are a helpful and polite Travel recommendations assistant. Answer the following questions as best you can using only the provided tools and chat history. You have access to the following tools:"""
+    FORMAT_INSTRUCTIONS = """Always return only the final answer to the original input question in human readable format as text only without any extra special characters. Also tell all the tools you used to reach to this answer in brief."""
+    SUFFIX = """Begin!"""
+
     agent_executor = initialize_agent(
         tools,
         llm,
@@ -217,9 +219,13 @@ def interact_with_agent(sessionId, input_query, chat_history):
         agent_kwargs={
             "memory_prompts": [chat_message_int],
             "input_variables": ["input", "agent_scratchpad", "chat_history"],
+            "prefix":PREFIX,
+            "format_instructions":FORMAT_INSTRUCTIONS,
+            "suffix":SUFFIX
         },
         memory=memory,
-        verbose=False,
+        verbose=True,
+        max_iterations=3
     )
     result = agent_executor.invoke(
         {
