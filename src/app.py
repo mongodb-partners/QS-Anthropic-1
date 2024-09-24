@@ -64,12 +64,6 @@ database = mongoDBClient["anthropic-travel-agency"]
 collection = database["trip_recommendations"]
 
 
-def mongodb_search(query: str) -> str:
-    """Returns results from MongoDB related to the user input. Pass text input only."""
-    res = mdb_query(query)
-    return str(res)
-
-
 def mongodb_place_lookup_by_country(query_str: str) -> str:
     """Retrieve place by Country Name"""
     res = ""
@@ -115,8 +109,9 @@ def mongodb_place_lookup_by_best_time_to_visit(query_str: str) -> str:
     return str(res)
 
 
-# filter the data using the criteria and do a schematic search
-def mdb_query(query):
+# filter the data using the criteria and do a Schematic search
+def mongodb_search(query: str) -> str:
+    """Returns results from MongoDB related to the user input. Pass text input only."""
     embeddings = BedrockEmbeddings(
         client=bedrock_runtime,
         model_id=embedding_model_id,
@@ -208,7 +203,6 @@ def interact_with_agent(sessionId, input_query, chat_history):
     ]
 
     chat_message_int = MessagesPlaceholder(variable_name="chat_history")
-    # memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
     memory = ConversationBufferMemory(
         memory_key="chat_history",
