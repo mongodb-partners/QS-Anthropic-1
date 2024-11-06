@@ -65,7 +65,19 @@ collection = database["trip_recommendations"]
 
 
 def mongodb_place_lookup_by_country(query_str: str) -> str:
-    """Retrieve place by Country Name"""
+    """
+    Retrieve places by country name from the MongoDB database.
+
+    This function connects to the MongoDB Atlas database and searches for place names
+    that match the provided country name query. The search is case-insensitive and
+    utilizes a regex match. The function returns a list of matching place names.
+
+    Args:
+        query_str (str): The country name to search for. It may include partial matches.
+
+    Returns:
+        str: A string representation of the list of place names that match the country query.
+    """
     res = ""
     res = collection.aggregate(
         [
@@ -80,7 +92,20 @@ def mongodb_place_lookup_by_country(query_str: str) -> str:
 
 
 def mongodb_place_lookup_by_name(query_str: str) -> str:
-    """Retrieve place by Place Name"""
+    """
+    Retrieve place information by place name from the MongoDB database.
+
+    This function connects to the MongoDB Atlas database and searches for a place
+    using the provided name query. The search checks both the place name and country,
+    using case-insensitive regex matching. The function returns the first matching
+    document without the ID field.
+
+    Args:
+        query_str (str): The place name to search for. It may include partial matches.
+
+    Returns:
+        str: A string representation of the first matching document's details without the ID field.
+        """
     res = ""
     filter = {
         "$or": [
@@ -88,14 +113,27 @@ def mongodb_place_lookup_by_name(query_str: str) -> str:
             {"Country": {"$regex": query_str, "$options": "i"}},
         ]
     }
-    project = {"_id": 0}
+    project = {"_id": 0,"details_embedding":0}
 
     res = collection.find_one(filter=filter, projection=project)
     return str(res)
 
 
 def mongodb_place_lookup_by_best_time_to_visit(query_str: str) -> str:
-    """Retrieve place by Best Time to Visit"""
+    """
+    Retrieve place information by the best time to visit from the MongoDB database.
+
+    This function connects to the MongoDB Atlas database and searches for the best time
+    to visit places using the provided query string. The search is performed on both
+    place names and countries using case-insensitive regex matching. The function returns
+    the best time to visit for the first matching document.
+
+    Args:
+        query_str (str): The place name or country to search for. It may include partial matches.
+
+    Returns:
+        str: A string representation of the best time to visit for the first matching document.
+    """
     res = ""
     filter = {
         "$or": [
@@ -103,7 +141,7 @@ def mongodb_place_lookup_by_best_time_to_visit(query_str: str) -> str:
             {"Country": {"$regex": query_str, "$options": "i"}},
         ]
     }
-    project = {"Best Time To Visit": 1, "_id": 0}
+    project = {"Best Time To Visit": 1, "_id": 0,"details_embedding":0}
 
     res = collection.find_one(filter=filter, projection=project)
     return str(res)
@@ -111,7 +149,22 @@ def mongodb_place_lookup_by_best_time_to_visit(query_str: str) -> str:
 
 # filter the data using the criteria and do a Schematic search
 def mongodb_search(query: str) -> str:
-    """Retrieve results from MongoDB related to the user input by performing vector search. Pass text input only."""
+    """
+    Performs a vector search using MongoDB Atlas, retrieving documents based on the semantic similarity of
+    their embeddings to the given query.
+
+    This function leverages MongoDB Atlas' vector search capabilities to find documents whose embeddings
+    are similar to the query. It supports searching and retrieves documents based on the cosine similarity of their vector representations.
+
+    Args:
+        query (str): The search query string to perform the vector search.
+
+    Returns:
+        str: A list of document contents retrieved by the vector search, with each document's content
+            represented as a string.
+
+    """
+
     embeddings = BedrockEmbeddings(
         client=bedrock_runtime,
         model_id=embedding_model_id,
@@ -208,8 +261,12 @@ def interact_with_agent(sessionId, input_query, chat_history):
         return_messages=True,
     )
 
-    PREFIX = """You are a helpful and polite Travel recommendations assistant. Answer the following questions as best you can using only the provided tools and chat history. You have access to the following tools:"""
-    FORMAT_INSTRUCTIONS = """Always return only the final answer to the original input question in human readable format as text only without any extra special characters. Also tell all the tools you used to reach to this answer in brief."""
+    PREFIX = """You are a highly capable, friendly, and knowledgeable assistant with access to various tools to extract information from MongoDB databases about any data.
+            Engage with the user in a conversational manner and aim to provide accurate and helpful responses to their questions. Respond well to greetings.
+            Utilize the all the available tools effectively to gather information, and refer to the chat history as needed. If the chat history shows that you didi not have information earlier that does not mean you do not have it now. Uses the tools again and find the information.
+            You have access to the following tools:"""
+    FORMAT_INSTRUCTIONS = """Your final response should be in detail and written in clear, human-readable text, free from any extra special characters. Always return only the final answer to the original input question.
+            At the end of your response, briefly list the tools you used to arrive at your answer."""
     SUFFIX = """Begin!"""
 
     agent_executor = initialize_agent(
