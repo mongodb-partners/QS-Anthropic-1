@@ -4,8 +4,12 @@ The use case in focus involves a travel advisory service designed for end users.
 At the core of the architecture is MongoDB Atlas, which functions both as the primary content store and the vector database for the system. The architecture exhibits agent-based behavior, where the application intelligently leverages multiple agents to process user requests and deliver the most accurate and relevant responses. This dynamic approach ensures that the system adapts to various types of user inquiries, providing tailored solutions.
 Goal: To assist the customer in planning a vacation by providing personalized recommendations based on their preferences.
 
+![image](https://github.com/user-attachments/assets/ba237d6e-9df7-4200-ac2c-52b97e556409)
 
-Clone the repo using git clone :
+**Figure:** Architecture diagram illustrating the integration of AWS, Anthropic, and MongoDB for building an AI-enhanced end-to-end application.
+
+
+Clone the repo using git clone : https://github.com/mongodb-partners/QS-Anthropic-1.git
 
 
 
