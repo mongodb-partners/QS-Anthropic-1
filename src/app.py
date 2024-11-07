@@ -186,7 +186,7 @@ def mongodb_search(query: str) -> str:
             },
             {
                 "$project": {
-                    "score": {"$meta": "searchScore"},
+                    "score": {"$meta": "vectorSearchScore"},
                     field_name_to_be_vectorized: 1,
                     "_id": 0,
                 }
