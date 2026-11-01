@@ -56,3 +56,7 @@ AWS Lex will be employed to create an intuitive user interface, offering natural
 8. navigate to FallbackIntent and activate the Fulfillment using radio button and click on Save intent.
 9. Build intent the bot using the build button on the top and once built click on Test.
 10. Ask questions related to places to visit like India, Singapore, Bhutan etc.
+
+## Architecture
+
+![Architecture](docs/images/architecture.svg)
