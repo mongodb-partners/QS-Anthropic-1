@@ -1,0 +1,15 @@
+---
+title: Travel advisory agent on AWS, Anthropic and MongoDB Atlas
+---
+graph LR
+    User([Traveler]) --> Lex["Amazon Lex<br/>chat interface"]
+    Lex --> Lambda["AWS Lambda<br/>LangChain agent"]
+    Secrets["AWS Secrets Manager<br/>Atlas connection string"] --> Lambda
+    Lambda <--> Claude["Anthropic Claude on Amazon Bedrock<br/>reasoning and tool use"]
+    Lambda --> Titan["Amazon Bedrock Titan<br/>text embeddings"]
+    subgraph ATLAS[MongoDB Atlas]
+        Trips[("trip_recommendations<br/>Vector Search")]
+        History[("chat_history<br/>session memory")]
+    end
+    Lambda --> Trips
+    Lambda <--> History
